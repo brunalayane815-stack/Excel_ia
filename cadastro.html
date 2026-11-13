@@ -1,0 +1,400 @@
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestão de Pedidos</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}
+header{background:#12345a;color:white;padding:22px}
+header h1{margin:0;font-size:23px}
+header p{margin:7px 0 0;color:#cbd5e1}
+main{max-width:1100px;margin:22px auto;padding:0 15px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card,.panel{background:white;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0000000c}
+.card small{color:#64748b}
+.card h2{color:#087b55;margin:10px 0 0;font-size:24px}
+.panel{margin-top:18px}
+h3{margin-top:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}
+input,select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:7px;font-size:14px;background:white}
+.field{margin-bottom:13px}
+button{border:0;border-radius:7px;padding:11px 15px;font-weight:bold;cursor:pointer}
+.primary{background:#1769aa;color:white}
+.green{background:#168b55;color:white}
+.gray{background:#e2e8f0;color:#172033}
+.red{background:#fee2e2;color:#991b1b}
+button:hover{filter:brightness(.95)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px;border-bottom:1px solid #e2e8f0}
+th{background:#f1f5f9}
+.total{font-size:22px;color:#087b55;font-weight:bold}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.scroll{overflow-x:auto}
+.muted{color:#64748b;font-size:13px}
+@media(max-width:650px){
+.cards{grid-template-columns:1fr}
+.grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>📊 Gestão de Pedidos</h1>
+<p>Controle de vendas, clientes, faturamento e WhatsApp</p>
+</header>
+
+<main>
+
+<section class="cards">
+<div class="card">
+<small>Faturamento registrado</small>
+<h2 id="faturamento">R$ 0,00</h2>
+</div>
+<div class="card">
+<small>Total de pedidos</small>
+<h2 id="pedidos">0</h2>
+</div>
+<div class="card">
+<small>Unidades vendidas</small>
+<h2 id="unidades">0</h2>
+</div>
+</section>
+
+<section class="panel">
+<h3>📝 Cadastro de pedido</h3>
+
+<div class="grid">
+<div class="field">
+<label>Nome do cliente</label>
+<input id="cliente" placeholder="Nome completo">
+</div>
+<div class="field">
+<label>WhatsApp do cliente (opcional)</label>
+<input id="telefone" placeholder="Ex: 5511999999999">
+</div>
+<div class="field">
+<label>Região</label>
+<select id="regiao">
+<option value="">Selecione</option>
+<option>Região Centro-Oeste</option>
+<option>Região Nordeste</option>
+<option>Região Norte</option>
+<option>Região Sul</option>
+<option>Região Sudeste</option>
+</select>
+</div>
+<div class="field">
+<label>Data do pedido</label>
+<input type="date" id="data">
+</div>
+</div>
+
+<h3>Produtos do pedido</h3>
+<div class="grid">
+<div class="field">
+<label>Produto</label>
+<select id="produto"></select>
+</div>
+<div class="field">
+<label>Quantidade</label>
+<input type="number" id="quantidade" min="1" value="1">
+</div>
+</div>
+
+<button class="primary" onclick="adicionarItem()">+ Adicionar produto</button>
+
+<div class="scroll" style="margin-top:15px">
+<table>
+<thead>
+<tr>
+<th>Produto</th>
+<th>Qtd.</th>
+<th>Unitário</th>
+<th>Subtotal</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="carrinho"></tbody>
+</table>
+</div>
+
+<div style="margin-top:18px">
+<p>Subtotal: <strong id="subtotal">R$ 0,00</strong></p>
+<p>Frete por unidade: <strong id="frete">R$ 0,00</strong></p>
+<p>Quantidade de unidades: <strong id="totalUnidades">0</strong></p>
+<p class="total">TOTAL: <span id="total">R$ 0,00</span></p>
+</div>
+
+<div class="actions">
+<button class="green" onclick="salvarPedido()">Salvar pedido</button>
+<button class="gray" onclick="limparFormulario()">Limpar</button>
+</div>
+
+<p class="muted">O frete é calculado por unidade. Essa regra pode ser alterada conforme a política comercial.</p>
+</section>
+
+<section class="panel">
+<h3>📦 Histórico de pedidos</h3>
+<input id="busca" placeholder="Pesquisar cliente ou pedido..." oninput="renderizarPedidos()">
+<div class="scroll" style="margin-top:12px">
+<table>
+<thead>
+<tr>
+<th>Nº</th>
+<th>Cliente</th>
+<th>Data</th>
+<th>Região</th>
+<th>Unidades</th>
+<th>Total</th>
+<th>Ações</th>
+</tr>
+</thead>
+<tbody id="historico"></tbody>
+</table>
+</div>
+</section>
+
+</main>
+
+<script>
+// TABELA DE PRODUTOS
+const produtos = {
+ "Pen drive 32GB":45,
+ "Monitor OLED 33":1790,
+ "Smartphone Android":3200,
+ "Smart TV 50 4K":2950,
+ "TV 48 4K":2840,
+ "TV 60 4K":3470,
+ "Smartphone iOS":8300
+};
+
+// TABELA DE FRETES POR UNIDADE
+const fretes = {
+ "Região Centro-Oeste":15,
+ "Região Nordeste":20,
+ "Região Norte":25,
+ "Região Sul":15,
+ "Região Sudeste":10
+};
+
+let carrinho=[];
+let pedidos=JSON.parse(localStorage.getItem("pedidosGestao")||"[]");
+
+const moeda=v=>Number(v).toLocaleString("pt-BR",{
+ style:"currency",currency:"BRL"
+});
+
+const el=id=>document.getElementById(id);
+
+function iniciar(){
+ el("produto").innerHTML=Object.keys(produtos)
+ .map(p=>`<option value="${p}">${p} - ${moeda(produtos[p])}</option>`)
+ .join("");
+
+ el("data").value=new Date().toLocaleDateString("en-CA");
+ atualizarDashboard();
+ renderizarPedidos();
+}
+
+function adicionarItem(){
+ const nome=el("produto").value;
+ const qtd=Number(el("quantidade").value);
+
+ if(!nome||!Number.isInteger(qtd)||qtd<1){
+ alert("Informe um produto e uma quantidade válida.");
+ return;
+ }
+
+ const existente=carrinho.find(i=>i.nome===nome);
+ if(existente) existente.qtd+=qtd;
+ else carrinho.push({nome,qtd,preco:produtos[nome]});
+
+ el("quantidade").value=1;
+ renderizarCarrinho();
+}
+
+function removerItem(index){
+ carrinho.splice(index,1);
+ renderizarCarrinho();
+}
+
+function calcular(){
+ const unidades=carrinho.reduce((s,i)=>s+i.qtd,0);
+ const subtotal=carrinho.reduce((s,i)=>s+i.qtd*i.preco,0);
+ const freteUnit=fretes[el("regiao").value]||0;
+ const valorFrete=unidades*freteUnit;
+
+ return {unidades,subtotal,valorFrete,total:subtotal+valorFrete};
+}
+
+function renderizarCarrinho(){
+ el("carrinho").innerHTML=carrinho.map((i,n)=>`
+ <tr>
+ <td>${i.nome}</td>
+ <td>${i.qtd}</td>
+ <td>${moeda(i.preco)}</td>
+ <td>${moeda(i.qtd*i.preco)}</td>
+ <td><button class="red" onclick="removerItem(${n})">X</button></td>
+ </tr>`).join("");
+
+ const c=calcular();
+ el("subtotal").textContent=moeda(c.subtotal);
+ el("frete").textContent=moeda(c.valorFrete);
+ el("totalUnidades").textContent=c.unidades;
+ el("total").textContent=moeda(c.total);
+}
+
+el("regiao").addEventListener("change",renderizarCarrinho);
+
+function salvarPedido(){
+ const cliente=el("cliente").value.trim();
+ const regiao=el("regiao").value;
+ const data=el("data").value;
+
+ if(!cliente||!regiao||!data||carrinho.length===0){
+ alert("Preencha cliente, região, data e adicione pelo menos um produto.");
+ return;
+ }
+
+ const c=calcular();
+
+ const pedido={
+ id:Date.now(),
+ cliente,
+ telefone:el("telefone").value.trim(),
+ regiao,
+ data,
+ itens:carrinho.map(i=>({...i})),
+ unidades:c.unidades,
+ subtotal:c.subtotal,
+ frete:c.valorFrete,
+ total:c.total
+ };
+
+ pedidos.unshift(pedido);
+ localStorage.setItem("pedidosGestao",JSON.stringify(pedidos));
+
+ alert("Pedido cadastrado com sucesso!");
+
+ limparFormulario();
+ atualizarDashboard();
+ renderizarPedidos();
+}
+
+function mensagemPedido(p){
+ return [
+ "🛒 *NOVO PEDIDO*",
+ "Pedido Nº: "+p.id,
+ "Cliente: "+p.cliente,
+ "Data: "+p.data,
+ "Região: "+p.regiao,
+ "",
+ "*PRODUTOS:*",
+ ...p.itens.map(i=>
+ `• ${i.nome} | ${i.qtd} x ${moeda(i.preco)} = ${moeda(i.qtd*i.preco)}`
+ ),
+ "",
+ "Unidades: "+p.unidades,
+ "Subtotal: "+moeda(p.subtotal),
+ "Frete: "+moeda(p.frete),
+ "*TOTAL: "+moeda(p.total)+"*"
+ ].join("\n");
+}
+
+function enviarWhatsApp(id){
+ const p=pedidos.find(x=>x.id===id);
+ if(!p)return;
+
+ // Prioriza o número do cliente.
+ // Se não houver, solicita o número de destino.
+ let numero=p.telefone.replace(/\D/g,"");
+
+ if(!numero){
+ numero=prompt("Digite o WhatsApp de destino com DDI e DDD (ex.: 5511999999999):")||"";
+ numero=numero.replace(/\D/g,"");
+ }
+
+ if(!numero){
+ alert("Número de WhatsApp não informado.");
+ return;
+ }
+
+ if(numero.length<12||numero.length>13){
+ alert("Informe um número com DDI e DDD. Exemplo: 5511999999999");
+ return;
+ }
+
+ const url="https://wa.me/"+numero+
+ "?text="+encodeURIComponent(mensagemPedido(p));
+
+ window.open(url,"_blank");
+}
+
+function renderizarPedidos(){
+ const busca=el("busca").value.toLowerCase();
+
+ const lista=pedidos.filter(p=>
+ p.cliente.toLowerCase().includes(busca)||
+ String(p.id).includes(busca)
+ );
+
+ el("historico").innerHTML=lista.map(p=>`
+ <tr>
+ <td>${p.id}</td>
+ <td>${p.cliente}</td>
+ <td>${p.data}</td>
+ <td>${p.regiao.replace("Região ","")}</td>
+ <td>${p.unidades}</td>
+ <td>${moeda(p.total)}</td>
+ <td>
+ <div class="actions">
+ <button class="green" onclick="enviarWhatsApp(${p.id})">WhatsApp</button>
+ <button class="red" onclick="excluirPedido(${p.id})">Excluir</button>
+ </div>
+ </td>
+ </tr>`).join("");
+}
+
+function atualizarDashboard(){
+ const faturamento=pedidos.reduce((s,p)=>s+p.total,0);
+ const unidades=pedidos.reduce((s,p)=>s+p.unidades,0);
+
+ el("faturamento").textContent=moeda(faturamento);
+ el("pedidos").textContent=pedidos.length;
+ el("unidades").textContent=unidades;
+}
+
+function excluirPedido(id){
+ if(!confirm("Deseja excluir este pedido?"))return;
+
+ pedidos=pedidos.filter(p=>p.id!==id);
+ localStorage.setItem("pedidosGestao",JSON.stringify(pedidos));
+
+ atualizarDashboard();
+ renderizarPedidos();
+}
+
+function limparFormulario(){
+ el("cliente").value="";
+ el("telefone").value="";
+ el("regiao").value="";
+ el("data").value=new Date().toLocaleDateString("en-CA");
+ carrinho=[];
+ renderizarCarrinho();
+}
+
+iniciar();
+</script>
+</body>
+</html>
